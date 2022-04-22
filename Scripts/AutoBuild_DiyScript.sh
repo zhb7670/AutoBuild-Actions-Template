@@ -6,17 +6,17 @@ Firmware_Diy_Core() {
 
 	Author=AUTO
 	Author_URL=AUTO
-	Default_FLAG=AUTO
+	Default_Flag=AUTO
 	Default_IP="192.168.1.1"
-	Banner_Message="Powered by AutoBuild-Actions"
+	Default_Title="Powered by AutoBuild-Actions"
 
-	Short_Firmware_Date=true
-	Checkout_Virtual_Images=false
-	Firmware_Format=AUTO
-	REGEX_Skip_Checkout="packages|buildinfo|sha256sums|manifest|kernel|rootfs|factory"
+	Short_Fw_Date=true
+	x86_Full_Images=false
+	Fw_Format=false
+	Regex_Skip="packages|buildinfo|sha256sums|manifest|kernel|rootfs|factory|itb|profile"
 
-	INCLUDE_AutoBuild_Features=true
-	INCLUDE_Original_OpenWrt_Compatible=false
+	AutoBuild_Features=true
+	Compatible=false
 }
 
 Firmware_Diy() {
@@ -31,7 +31,7 @@ Firmware_Diy() {
 	# ${TARGET_BOARD}		设备架构
 	# ${TARGET_FLAG}		固件名称后缀
 
-	# ${Home}				OpenWrt 源码位置
+	# ${WORK}				OpenWrt 源码位置
 	# ${CONFIG_FILE}		使用的配置文件名称
 	# ${FEEDS_CONF}			OpenWrt 源码目录下的 feeds.conf.default 文件
 	# ${CustomFiles}		仓库中的 /CustomFiles 绝对路径
@@ -40,5 +40,45 @@ Firmware_Diy() {
 	# ${FEEDS_PKG}			OpenWrt 源码目录下的 package/feeds/packages 目录
 	# ${BASE_FILES}			OpenWrt 源码目录下的 package/base-files/files 目录
 
-	:
+	case "${OP_AUTHOR}/${OP_REPO}:${OP_BRANCH}" in
+	coolsnowwolf/lede:master)
+		sed -i "s?/bin/login?/usr/libexec/login.sh?g" ${FEEDS_PKG}/ttyd/files/ttyd.config
+		rm -rf $(PKG_Finder d "package feeds" luci-theme-argon)
+		AddPackage git lean luci-theme-argon jerrykuku 18.06
+		AddPackage git lean luci-app-argon-config jerrykuku master
+		AddPackage git other AutoBuild-Packages Hyy2001X master
+		AddPackage svn other luci-app-smartdns immortalwrt/luci/branches/openwrt-18.06/applications
+		AddPackage svn other luci-app-eqos immortalwrt/luci/branches/openwrt-18.06/applications
+		AddPackage git other OpenClash vernesong master
+		AddPackage git other luci-app-ikoolproxy iwrt main
+		AddPackage git other helloworld fw876 master
+		sed -i 's/143/143,8080,8443/' $(PKG_Finder d package luci-app-ssr-plus)/root/etc/init.d/shadowsocksr
+		patch < ${CustomFiles}/Patches/revert_remove-alterId-config.patch -p1 -d ${WORK}
+		patch < ${CustomFiles}/Patches/fix_ntfs3_antfs_conflict.patch -p1 -d ${WORK}
+		patch < ${CustomFiles}/Patches/fix_aria2_autocreate_path.patch -p1 -d ${WORK}
+
+		case "${TARGET_PROFILE}" in
+		d-team_newifi-d2)
+			# patch < ${CustomFiles}/${TARGET_PROFILE}_mac80211.patch -p1 -d ${WORK}
+			Copy ${CustomFiles}/${TARGET_PROFILE}_system ${BASE_FILES}/etc/config system
+			sed -i "/DEVICE_COMPAT_VERSION := 1.1/d" target/linux/ramips/image/mt7621.mk
+			Copy ${CustomFiles}/fake-automount $(PKG_Finder d "package" automount)/files 15-automount
+		;;
+		xiaoyu_xy-c5)
+			Copy ${CustomFiles}/fake-automount $(PKG_Finder d "package" automount)/files 15-automount
+		;;
+		x86_64)
+			AddPackage git passwall-depends openwrt-passwall xiaorouji packages
+			AddPackage git passwall-luci openwrt-passwall xiaorouji luci
+			rm -rf packages/lean/autocore
+			AddPackage git lean autocore-modify Hyy2001X master
+			cat ${CustomFiles}/x86_64_kconfig >> ${WORK}/target/linux/x86/config-5.15
+		;;
+		esac
+	;;
+	immortalwrt/immortalwrt*)
+		sed -i "s?/bin/login?/usr/libexec/login.sh?g" ${FEEDS_PKG}/ttyd/files/ttyd.config
+		AddPackage git other AutoBuild-Packages Hyy2001X master
+	;;
+	esac
 }
