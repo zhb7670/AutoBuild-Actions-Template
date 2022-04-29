@@ -4,9 +4,9 @@
 
 Firmware_Diy_Core() {
 
-	Author=AUTO
-	Author_URL=AUTO
-	Default_Flag=AUTO
+	Author=洪波自定义LEDE固件
+	Author_URL=https://github.com/zhb7670/AutoBuild-Actions-Template
+	Default_Flag=科技改变生活
 	Default_IP="192.168.1.1"
 	Default_Title="Powered by AutoBuild-Actions"
 
